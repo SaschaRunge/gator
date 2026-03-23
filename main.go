@@ -30,7 +30,7 @@ func main() {
 	cmd, _ := cli.NewCommand(args[1:])
 	err = cmds.Run(&state, cmd)
 	if err != nil {
-		fmt.Printf("Could not run command: '%s'\n", err)
+		fmt.Printf("Error while handeling command: '%s'\n", err)
 		os.Exit(1)
 	}
 
