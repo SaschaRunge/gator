@@ -52,6 +52,7 @@ func NewCommands() commands {
 	cmds.register("login", handlerLogin)
 	cmds.register("register", handlerRegister)
 	cmds.register("reset", handlerReset)
+	cmds.register("users", handlerUsers)
 	return cmds
 }
 
@@ -119,10 +120,27 @@ func handlerRegister(s *state, cmd command) error {
 }
 
 func handlerReset(s *state, cmd command) error {
-	if err := s.dbQueries.DeleteUsers(context.Background()); err != nil {
+	if err := s.dbQueries.ResetUsers(context.Background()); err != nil {
 		return err
 	}
 
 	fmt.Println("Reset table 'users'.")
+	return nil
+}
+
+func handlerUsers(s *state, cmd command) error {
+	users, err := s.dbQueries.GetUsers(context.Background())
+	if err != nil {
+		return err
+	}
+
+	currentUser := s.config.Current_user_name
+	for _, user := range users {
+		msg := fmt.Sprintf("* %s", user.Name)
+		if user.Name == currentUser {
+			msg = fmt.Sprintf("%s (current)", msg)
+		}
+		fmt.Println(msg)
+	}
 	return nil
 }
