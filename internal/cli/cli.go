@@ -1,23 +1,55 @@
 package cli
 
 import (
-	"context"
-	"errors"
 	"fmt"
-	"time"
+	"os"
 
 	"github.com/SaschaRunge/gator/internal/config"
 	"github.com/SaschaRunge/gator/internal/database"
-	"github.com/google/uuid"
 )
 
-type state struct {
+type CLI struct {
+	commands map[string]func(State, command) error
+	state    State
+}
+
+func New(s State) *CLI {
+	return &CLI{
+		commands: registerCommands(),
+		state:    s,
+	}
+}
+
+func (c *CLI) Run() error {
+	args := os.Args
+	if len(args) < 2 {
+		return fmt.Errorf("missing command name in input.")
+	}
+
+	cmd, err := newCommand(args[1:])
+	if err != nil {
+		return fmt.Errorf("error parsing command: %w", err)
+	}
+
+	return c.runCommand(cmd)
+}
+
+func (c *CLI) runCommand(cmd command) error {
+	callback, exists := c.commands[cmd.name]
+	if !exists {
+		return fmt.Errorf("%s is not a valid command.", cmd.name)
+	}
+
+	return callback(c.state, cmd)
+}
+
+type State struct {
 	config    *config.Config
 	dbQueries *database.Queries
 }
 
-func NewState(cfg *config.Config, dbQueries *database.Queries) state {
-	return state{cfg, dbQueries}
+func NewState(cfg *config.Config, dbQueries *database.Queries) State {
+	return State{cfg, dbQueries}
 }
 
 type command struct {
@@ -25,122 +57,22 @@ type command struct {
 	args []string
 }
 
-type commands struct {
-	commands map[string]func(*state, command) error
-}
-
-func NewCommand(args []string) (command, error) {
+func newCommand(args []string) (command, error) {
 	if len(args) == 0 {
-		return command{}, errors.New("No arguments supplied for creation of command.\n")
+		return command{}, fmt.Errorf("no arguments supplied for creation of command.")
 	}
 
-	if len(args) == 1 {
-		return command{
-			name: args[0],
-			args: []string{},
-		}, nil
-	} else {
-		return command{
-			name: args[0],
-			args: args[1:],
-		}, nil
-	}
+	return command{
+		name: args[0],
+		args: args[1:],
+	}, nil
 }
 
-func NewCommands() commands {
-	cmds := commands{make(map[string]func(*state, command) error)}
-	cmds.register("login", handlerLogin)
-	cmds.register("register", handlerRegister)
-	cmds.register("reset", handlerReset)
-	cmds.register("users", handlerUsers)
-	return cmds
-}
-
-func (c *commands) register(name string, f func(*state, command) error) {
-	c.commands[name] = f
-}
-
-func (c *commands) Run(s *state, cmd command) error {
-	callback, exists := c.commands[cmd.name]
-	if !exists {
-		errMsg := fmt.Sprintf("%s is not a valid command.\n", cmd.name)
-		return errors.New(errMsg)
+func registerCommands() map[string]func(State, command) error {
+	return map[string]func(State, command) error{
+		"login":    handlerLogin,
+		"register": handlerRegister,
+		"reset":    handlerReset,
+		"users":    handlerUsers,
 	}
-
-	return callback(s, cmd)
-}
-
-func handlerLogin(s *state, cmd command) error {
-	if len(cmd.args) == 0 {
-		errMsg := fmt.Sprintf("Missing argument for command. Usage: %s <username>\n", cmd.name)
-		return errors.New(errMsg)
-	}
-
-	if _, err := s.dbQueries.GetUser(context.Background(), cmd.args[0]); err != nil {
-		errMsg := fmt.Sprintf("User '%s' does not exist!", cmd.args[0])
-		return errors.New(errMsg)
-	}
-
-	if err := s.config.SetUser(cmd.args[0]); err != nil {
-		return err
-	} else {
-		fmt.Printf("Current user: %s\n", cmd.args[0])
-	}
-
-	return nil
-}
-
-func handlerRegister(s *state, cmd command) error {
-	if len(cmd.args) == 0 {
-		errMsg := fmt.Sprintf("Missing argument for command. Usage: %s <username>\n", cmd.name)
-		return errors.New(errMsg)
-	}
-
-	userParams := database.CreateUserParams{
-		ID:        uuid.New(),
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-		Name:      cmd.args[0],
-	}
-
-	createdUser, err := s.dbQueries.CreateUser(context.Background(), userParams)
-	if err != nil {
-		return err
-	}
-
-	if err := s.config.SetUser(cmd.args[0]); err != nil {
-		return err
-	} else {
-		fmt.Printf("Current user: %s\n", cmd.args[0])
-	}
-
-	fmt.Println(createdUser)
-
-	return nil
-}
-
-func handlerReset(s *state, cmd command) error {
-	if err := s.dbQueries.ResetUsers(context.Background()); err != nil {
-		return err
-	}
-
-	fmt.Println("Reset table 'users'.")
-	return nil
-}
-
-func handlerUsers(s *state, cmd command) error {
-	users, err := s.dbQueries.GetUsers(context.Background())
-	if err != nil {
-		return err
-	}
-
-	currentUser := s.config.Current_user_name
-	for _, user := range users {
-		msg := fmt.Sprintf("* %s", user.Name)
-		if user.Name == currentUser {
-			msg = fmt.Sprintf("%s (current)", msg)
-		}
-		fmt.Println(msg)
-	}
-	return nil
 }

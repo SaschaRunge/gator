@@ -13,26 +13,25 @@ import (
 )
 
 func main() {
-	cfg, _ := config.Read()
+	cfg, err := config.Read()
+	if err != nil {
+		fmt.Printf("Error loading config: %s", err)
+		os.Exit(1)
+	}
 
 	db, err := sql.Open("postgres", cfg.Db_url)
+	if err != nil {
+		fmt.Printf("Error opening SQL-DB: %s", err)
+		os.Exit(1)
+	}
 	dbQueries := database.New(db)
 
 	state := cli.NewState(&cfg, dbQueries)
-	cmds := cli.NewCommands()
-
-	args := os.Args
-	if len(args) < 2 {
-		fmt.Printf("Missing command name in input. Exiting.\n")
+	newCli := cli.New(state)
+	if err := newCli.Run(); err != nil {
+		fmt.Printf("error running CLI: %s", err)
 		os.Exit(1)
 	}
 
-	cmd, _ := cli.NewCommand(args[1:])
-	err = cmds.Run(&state, cmd)
-	if err != nil {
-		fmt.Printf("Error while handeling command: '%s'\n", err)
-		os.Exit(1)
-	}
-
-	fmt.Printf("%+v", cfg)
+	//fmt.Printf("%+v", cfg)
 }
