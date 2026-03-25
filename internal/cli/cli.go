@@ -13,6 +13,16 @@ type CLI struct {
 	state    State
 }
 
+type State struct {
+	config    *config.Config
+	dbQueries *database.Queries
+}
+
+type command struct {
+	name string
+	args []string
+}
+
 func New(s State) *CLI {
 	return &CLI{
 		commands: registerCommands(),
@@ -31,30 +41,20 @@ func (c *CLI) Run() error {
 		return fmt.Errorf("error parsing command: %w", err)
 	}
 
-	return c.runCommand(cmd)
+	return cmd.run(c)
 }
 
-func (c *CLI) runCommand(cmd command) error {
-	callback, exists := c.commands[cmd.name]
+func (c *command) run(cli *CLI) error {
+	callback, exists := cli.commands[c.name]
 	if !exists {
-		return fmt.Errorf("%s is not a valid command.", cmd.name)
+		return fmt.Errorf("%s is not a valid command.", c.name)
 	}
 
-	return callback(c.state, cmd)
-}
-
-type State struct {
-	config    *config.Config
-	dbQueries *database.Queries
+	return callback(cli.state, *c)
 }
 
 func NewState(cfg *config.Config, dbQueries *database.Queries) State {
 	return State{cfg, dbQueries}
-}
-
-type command struct {
-	name string
-	args []string
 }
 
 func newCommand(args []string) (command, error) {
@@ -68,10 +68,13 @@ func newCommand(args []string) (command, error) {
 	}, nil
 }
 
+//func (c *command)
+
 func registerCommands() map[string]func(State, command) error {
 	return map[string]func(State, command) error{
 		"addfeed":  handlerAddFeed,
 		"agg":      handlerAgg,
+		"feeds":    handlerFeeds,
 		"login":    handlerLogin,
 		"register": handlerRegister,
 		"reset":    handlerReset,

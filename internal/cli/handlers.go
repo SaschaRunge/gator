@@ -12,8 +12,8 @@ import (
 )
 
 func handlerAddFeed(s State, cmd command) error {
-	if len(cmd.args) <= 1 {
-		return fmt.Errorf("missing argument for command. Usage: %s <name> <url>", cmd.name)
+	if len(cmd.args) != 2 {
+		return fmt.Errorf("usage: %s <name> <url>", cmd.name)
 	}
 
 	name := cmd.args[0]
@@ -36,7 +36,7 @@ func handlerAddFeed(s State, cmd command) error {
 
 	_, err = s.dbQueries.CreateFeed(ctx, feedParams)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to add feed, possible duplicate? %w", err)
 	}
 
 	return nil
@@ -52,9 +52,25 @@ func handlerAgg(s State, cmd command) error {
 	return nil
 }
 
+func handlerFeeds(s State, cmd command) error {
+	feeds, err := s.dbQueries.GetFeeds(context.Background())
+	if err != nil {
+		return err
+	}
+
+	for _, feed := range feeds {
+		user, err := s.dbQueries.GetUserFromUUID(context.Background(), feed.UserID)
+		if err != nil {
+			return fmt.Errorf("no matching uuid found in table users: %w", err)
+		}
+		fmt.Printf("name: %s | url: %s | creator: %s \n", feed.Name, feed.Url, user.Name)
+	}
+
+	return nil
+}
 func handlerLogin(s State, cmd command) error {
-	if len(cmd.args) == 0 {
-		return fmt.Errorf("missing argument for command. Usage: %s <username>", cmd.name)
+	if len(cmd.args) != 1 {
+		return fmt.Errorf("usage: %s <username>", cmd.name)
 	}
 
 	if _, err := s.dbQueries.GetUser(context.Background(), cmd.args[0]); err != nil {
@@ -71,8 +87,8 @@ func handlerLogin(s State, cmd command) error {
 }
 
 func handlerRegister(s State, cmd command) error {
-	if len(cmd.args) == 0 {
-		return fmt.Errorf("missing argument for command. Usage: %s <username>", cmd.name)
+	if len(cmd.args) != 1 {
+		return fmt.Errorf("usage: %s <username>", cmd.name)
 	}
 
 	userParams := database.CreateUserParams{
