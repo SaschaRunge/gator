@@ -11,6 +11,37 @@ import (
 	"github.com/SaschaRunge/gator/internal/rss"
 )
 
+func handlerAddFeed(s State, cmd command) error {
+	if len(cmd.args) <= 1 {
+		return fmt.Errorf("missing argument for command. Usage: %s <name> <url>", cmd.name)
+	}
+
+	name := cmd.args[0]
+	url := cmd.args[1]
+	ctx := context.Background()
+
+	user, err := s.dbQueries.GetUser(ctx, s.config.Current_user_name)
+	if err != nil {
+		return fmt.Errorf("unable to add feed, user %s not found in database: %w", s.config.Current_user_name, err)
+	}
+
+	feedParams := database.CreateFeedParams{
+		ID:        uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Name:      name,
+		Url:       url,
+		UserID:    user.ID,
+	}
+
+	_, err = s.dbQueries.CreateFeed(ctx, feedParams)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func handlerAgg(s State, cmd command) error {
 	rssFeed, err := rss.FetchFeed(context.Background(), FeedURL)
 	if err != nil {
@@ -23,7 +54,7 @@ func handlerAgg(s State, cmd command) error {
 
 func handlerLogin(s State, cmd command) error {
 	if len(cmd.args) == 0 {
-		return fmt.Errorf("missing argument for command. Usage: %s <username>\n", cmd.name)
+		return fmt.Errorf("missing argument for command. Usage: %s <username>", cmd.name)
 	}
 
 	if _, err := s.dbQueries.GetUser(context.Background(), cmd.args[0]); err != nil {
@@ -41,7 +72,7 @@ func handlerLogin(s State, cmd command) error {
 
 func handlerRegister(s State, cmd command) error {
 	if len(cmd.args) == 0 {
-		return fmt.Errorf("missing argument for command. Usage: %s <username>\n", cmd.name)
+		return fmt.Errorf("missing argument for command. Usage: %s <username>", cmd.name)
 	}
 
 	userParams := database.CreateUserParams{
