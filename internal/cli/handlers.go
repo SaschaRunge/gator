@@ -8,7 +8,18 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/SaschaRunge/gator/internal/database"
+	"github.com/SaschaRunge/gator/internal/rss"
 )
+
+func handlerAgg(s State, cmd command) error {
+	rssFeed, err := rss.FetchFeed(context.Background(), FeedURL)
+	if err != nil {
+		return fmt.Errorf("unable to fetch feed: %w", err)
+	}
+
+	fmt.Printf("%v\n", rssFeed)
+	return nil
+}
 
 func handlerLogin(s State, cmd command) error {
 	if len(cmd.args) == 0 {

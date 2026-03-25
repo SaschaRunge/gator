@@ -70,6 +70,7 @@ func newCommand(args []string) (command, error) {
 
 func registerCommands() map[string]func(State, command) error {
 	return map[string]func(State, command) error{
+		"agg":      handlerAgg,
 		"login":    handlerLogin,
 		"register": handlerRegister,
 		"reset":    handlerReset,
