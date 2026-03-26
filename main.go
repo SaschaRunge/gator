@@ -15,13 +15,13 @@ import (
 func main() {
 	cfg, err := config.Read()
 	if err != nil {
-		fmt.Printf("Error loading config: %s", err)
+		fmt.Printf("Error loading config: %s\n", err)
 		os.Exit(1)
 	}
 
 	db, err := sql.Open("postgres", cfg.Db_url)
 	if err != nil {
-		fmt.Printf("Error opening SQL-DB: %s", err)
+		fmt.Printf("Error opening SQL-DB: %s\n", err)
 		os.Exit(1)
 	}
 	dbQueries := database.New(db)
@@ -29,7 +29,7 @@ func main() {
 	state := cli.NewState(&cfg, dbQueries)
 	newCli := cli.New(state)
 	if err := newCli.Run(); err != nil {
-		fmt.Printf("error running CLI: %s", err)
+		fmt.Printf("error running CLI: %s\n", err)
 		os.Exit(1)
 	}
 

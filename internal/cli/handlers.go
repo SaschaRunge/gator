@@ -22,7 +22,7 @@ func handlerAddFeed(s State, cmd command) error {
 
 	user, err := s.dbQueries.GetUser(ctx, s.config.Current_user_name)
 	if err != nil {
-		return fmt.Errorf("unable to add feed, user %s not found in database: %w", s.config.Current_user_name, err)
+		return fmt.Errorf("unable to add feed, current user %s not found in database: %w", s.config.Current_user_name, err)
 	}
 
 	feedParams := database.CreateFeedParams{
@@ -39,7 +39,8 @@ func handlerAddFeed(s State, cmd command) error {
 		return fmt.Errorf("unable to add feed, possible duplicate? %w", err)
 	}
 
-	return nil
+	cmd.args = cmd.args[1:]
+	return handlerFollow(s, cmd)
 }
 
 func handlerAgg(s State, cmd command) error {
@@ -68,6 +69,61 @@ func handlerFeeds(s State, cmd command) error {
 
 	return nil
 }
+
+func handlerFollow(s State, cmd command) error {
+	if len(cmd.args) != 1 {
+		return fmt.Errorf("usage: %s <feed_url>", cmd.name)
+	}
+
+	ctx := context.Background()
+	user, err := s.dbQueries.GetUser(ctx, s.config.Current_user_name)
+	if err != nil {
+		return fmt.Errorf("unable to follow feed, current user %s not found in database: %w", s.config.Current_user_name, err)
+	}
+
+	url := cmd.args[0]
+	feed, err := s.dbQueries.GetFeedByURL(ctx, url)
+	if err != nil {
+		return fmt.Errorf("unable to find feed with url '%s': %w", url, err)
+	}
+
+	feedFollowParams := database.CreateFeedFollowParams{
+		ID:        uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		UserID:    user.ID,
+		FeedID:    feed.ID,
+	}
+
+	follow, err := s.dbQueries.CreateFeedFollow(context.Background(), feedFollowParams)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("User %s is now following feed %s.\n", follow.UserName, follow.FeedName)
+	return nil
+}
+
+func handlerFollowing(s State, cmd command) error {
+	if len(cmd.args) != 0 {
+		return fmt.Errorf("command %s does not support arguments", cmd.name)
+	}
+
+	ctx := context.Background()
+	follows, err := s.dbQueries.GetFeedFollowsForUser(ctx, s.config.Current_user_name)
+	if err != nil {
+		return fmt.Errorf("unable to retrieve followed feeds: %w", err)
+	}
+
+	fmt.Printf("You are currently following these feeds:\n")
+	for _, follow := range follows {
+		fmt.Printf("- %s \n", follow.FeedName)
+	}
+	fmt.Printf("==========\n")
+
+	return nil
+}
+
 func handlerLogin(s State, cmd command) error {
 	if len(cmd.args) != 1 {
 		return fmt.Errorf("usage: %s <username>", cmd.name)

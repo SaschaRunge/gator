@@ -72,12 +72,14 @@ func newCommand(args []string) (command, error) {
 
 func registerCommands() map[string]func(State, command) error {
 	return map[string]func(State, command) error{
-		"addfeed":  handlerAddFeed,
-		"agg":      handlerAgg,
-		"feeds":    handlerFeeds,
-		"login":    handlerLogin,
-		"register": handlerRegister,
-		"reset":    handlerReset,
-		"users":    handlerUsers,
+		"addfeed":   handlerAddFeed,
+		"agg":       handlerAgg,
+		"feeds":     handlerFeeds,
+		"follow":    handlerFollow,
+		"following": handlerFollowing,
+		"login":     handlerLogin,
+		"register":  handlerRegister,
+		"reset":     handlerReset,
+		"users":     handlerUsers,
 	}
 }
