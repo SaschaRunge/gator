@@ -168,6 +168,26 @@ func handlerReset(s State, cmd command) error {
 	return nil
 }
 
+func handlerUnfollow(s State, cmd command, user database.User) error {
+	if len(cmd.args) != 1 {
+		return fmt.Errorf("usage: %s <url>", cmd.name)
+	}
+
+	ctx := context.Background()
+	url := cmd.args[0]
+	feed, err := s.dbQueries.GetFeedByURL(ctx, url)
+	if err != nil {
+		return fmt.Errorf("unable to find feed with url '%s': %w", url, err)
+	}
+
+	deleteFollowParams := database.DeleteFollowParams{
+		UserID: user.ID,
+		FeedID: feed.ID,
+	}
+
+	return s.dbQueries.DeleteFollow(ctx, deleteFollowParams)
+}
+
 func handlerUsers(s State, cmd command) error {
 	users, err := s.dbQueries.GetUsers(context.Background())
 	if err != nil {

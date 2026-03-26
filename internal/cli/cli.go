@@ -80,6 +80,7 @@ func registerCommands() map[string]func(State, command) error {
 		"login":     handlerLogin,
 		"register":  handlerRegister,
 		"reset":     handlerReset,
+		"unfollow":  middlewareLoggedIn(handlerUnfollow),
 		"users":     handlerUsers,
 	}
 }
