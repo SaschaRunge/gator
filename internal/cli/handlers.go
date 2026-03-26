@@ -11,7 +11,7 @@ import (
 	"github.com/SaschaRunge/gator/internal/rss"
 )
 
-func handlerAddFeed(s State, cmd command) error {
+func handlerAddFeed(s State, cmd command, user database.User) error {
 	if len(cmd.args) != 2 {
 		return fmt.Errorf("usage: %s <name> <url>", cmd.name)
 	}
@@ -19,11 +19,6 @@ func handlerAddFeed(s State, cmd command) error {
 	name := cmd.args[0]
 	url := cmd.args[1]
 	ctx := context.Background()
-
-	user, err := s.dbQueries.GetUser(ctx, s.config.Current_user_name)
-	if err != nil {
-		return fmt.Errorf("unable to add feed, current user %s not found in database: %w", s.config.Current_user_name, err)
-	}
 
 	feedParams := database.CreateFeedParams{
 		ID:        uuid.New(),
@@ -34,13 +29,13 @@ func handlerAddFeed(s State, cmd command) error {
 		UserID:    user.ID,
 	}
 
-	_, err = s.dbQueries.CreateFeed(ctx, feedParams)
+	_, err := s.dbQueries.CreateFeed(ctx, feedParams)
 	if err != nil {
 		return fmt.Errorf("unable to add feed, possible duplicate? %w", err)
 	}
 
 	cmd.args = cmd.args[1:]
-	return handlerFollow(s, cmd)
+	return handlerFollow(s, cmd, user)
 }
 
 func handlerAgg(s State, cmd command) error {
@@ -70,16 +65,12 @@ func handlerFeeds(s State, cmd command) error {
 	return nil
 }
 
-func handlerFollow(s State, cmd command) error {
+func handlerFollow(s State, cmd command, user database.User) error {
 	if len(cmd.args) != 1 {
 		return fmt.Errorf("usage: %s <feed_url>", cmd.name)
 	}
 
 	ctx := context.Background()
-	user, err := s.dbQueries.GetUser(ctx, s.config.Current_user_name)
-	if err != nil {
-		return fmt.Errorf("unable to follow feed, current user %s not found in database: %w", s.config.Current_user_name, err)
-	}
 
 	url := cmd.args[0]
 	feed, err := s.dbQueries.GetFeedByURL(ctx, url)
@@ -192,4 +183,16 @@ func handlerUsers(s State, cmd command) error {
 		fmt.Println(msg)
 	}
 	return nil
+}
+
+func middlewareLoggedIn(handler func(s State, cmd command, user database.User) error) func(State, command) error {
+	return func(s State, cmd command) error {
+		ctx := context.Background()
+		user, err := s.dbQueries.GetUser(ctx, s.config.Current_user_name)
+		if err != nil {
+			return fmt.Errorf("current user %s not found in database: %w", s.config.Current_user_name, err)
+		}
+
+		return handler(s, cmd, user)
+	}
 }

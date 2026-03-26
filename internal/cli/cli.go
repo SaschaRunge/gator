@@ -72,10 +72,10 @@ func newCommand(args []string) (command, error) {
 
 func registerCommands() map[string]func(State, command) error {
 	return map[string]func(State, command) error{
-		"addfeed":   handlerAddFeed,
+		"addfeed":   middlewareLoggedIn(handlerAddFeed),
 		"agg":       handlerAgg,
 		"feeds":     handlerFeeds,
-		"follow":    handlerFollow,
+		"follow":    middlewareLoggedIn(handlerFollow),
 		"following": handlerFollowing,
 		"login":     handlerLogin,
 		"register":  handlerRegister,
