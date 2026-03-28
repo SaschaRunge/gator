@@ -5,7 +5,6 @@ import (
 	"encoding/xml"
 	"html"
 	"io"
-	_ "io"
 	"net/http"
 )
 
