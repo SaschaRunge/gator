@@ -8,7 +8,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/SaschaRunge/gator/internal/database"
-	"github.com/SaschaRunge/gator/internal/rss"
 )
 
 func handlerAddFeed(s State, cmd command, user database.User) error {
@@ -39,13 +38,23 @@ func handlerAddFeed(s State, cmd command, user database.User) error {
 }
 
 func handlerAgg(s State, cmd command) error {
-	rssFeed, err := rss.FetchFeed(context.Background(), FeedURL)
-	if err != nil {
-		return fmt.Errorf("unable to fetch feed: %w", err)
+	if len(cmd.args) != 1 {
+		return fmt.Errorf("usage: %s <period>", cmd.name)
 	}
 
-	fmt.Printf("%v\n", rssFeed)
-	return nil
+	timePeriod, err := time.ParseDuration(cmd.args[0])
+	if err != nil {
+		return fmt.Errorf("argument <period> could not be parsed into a time value, use e.g, '5s' or '1m': %w", err)
+	}
+
+	ticker := time.NewTicker(timePeriod)
+	fmt.Printf("Collecting feeds every %v.\n\n", timePeriod)
+
+	for ; ; <-ticker.C {
+		if err := scrapeFeeds(s); err != nil {
+			fmt.Println(err)
+		}
+	}
 }
 
 func handlerFeeds(s State, cmd command) error {
@@ -203,16 +212,4 @@ func handlerUsers(s State, cmd command) error {
 		fmt.Println(msg)
 	}
 	return nil
-}
-
-func middlewareLoggedIn(handler func(s State, cmd command, user database.User) error) func(State, command) error {
-	return func(s State, cmd command) error {
-		ctx := context.Background()
-		user, err := s.dbQueries.GetUser(ctx, s.config.Current_user_name)
-		if err != nil {
-			return fmt.Errorf("current user %s not found in database: %w", s.config.Current_user_name, err)
-		}
-
-		return handler(s, cmd, user)
-	}
 }
