@@ -6,7 +6,7 @@ gator is a basic cli rss-aggregator that allows you to follow feeds for multiple
 
 You'll need to have PostgresSQL installed:
 
-Go: https://go.dev/doc/install\n
+Go: https://go.dev/doc/install
 PostgresSQL: https://www.postgresql.org/
 
 ### Setup
@@ -23,7 +23,7 @@ You'll likely need psql aswell.
 
 Create a .gatorconfig.json in your home-directory:
 
-Windows: C:\Users\<username>\.gatorconfig.json\n
+Windows: C:\Users\<username>\.gatorconfig.json
 Linux: ~/.gatorconfig.json
 
 with contents
