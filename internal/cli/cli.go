@@ -74,6 +74,7 @@ func registerCommands() map[string]func(State, command) error {
 	return map[string]func(State, command) error{
 		"addfeed":   middlewareLoggedIn(handlerAddFeed),
 		"agg":       handlerAgg,
+		"browse":    middlewareLoggedIn(handlerBrowse),
 		"feeds":     handlerFeeds,
 		"follow":    middlewareLoggedIn(handlerFollow),
 		"following": handlerFollowing,

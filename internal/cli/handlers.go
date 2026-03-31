@@ -3,12 +3,15 @@ package cli
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
 
 	"github.com/SaschaRunge/gator/internal/database"
 )
+
+const feed_limit = 2
 
 func handlerAddFeed(s State, cmd command, user database.User) error {
 	if len(cmd.args) != 2 {
@@ -56,6 +59,46 @@ func handlerAgg(s State, cmd command) error {
 		}
 		fmt.Println("==========")
 	}
+}
+
+func handlerBrowse(s State, cmd command, user database.User) error {
+	if len(cmd.args) > 1 {
+		return fmt.Errorf("usage: %s <limit>", cmd.name)
+	}
+
+	ctx := context.Background()
+	var limit int64 = feed_limit
+	var err error
+	if len(cmd.args) == 1 {
+		limit, err = strconv.ParseInt(cmd.args[0], 10, 32)
+		if err != nil {
+			return fmt.Errorf("limit argument in %s <limit> must be of type int: %w", cmd.name, err)
+		}
+	}
+
+	getPostsForUserParams := database.GetPostsForUserParams{
+		UserID: user.ID,
+		Limit:  int32(limit),
+	}
+	posts, err := s.dbQueries.GetPostsForUser(ctx, getPostsForUserParams)
+
+	//fmt.Printf("%s", posts[0].Description.Value())
+	if err != nil {
+		return fmt.Errorf("failed to get posts for user %s: %w", user.Name, err)
+	}
+
+	fmt.Printf("Showing %d most recent feeds for user %s:\n\n", limit, user.Name)
+	for _, post := range posts {
+		feed, err := s.dbQueries.GetFeedByID(ctx, post.FeedID)
+		if err != nil {
+			return fmt.Errorf("failed to get source feed for feedID %d: %w", post.FeedID, err)
+		}
+		fmt.Printf("%s \n(from feed: %s | published: %s)\n\n", post.Title.String, feed.Name, post.PublishedAt.Time.String())
+		fmt.Printf("%s\n", post.Description.String)
+		fmt.Println("==========")
+	}
+
+	return nil
 }
 
 func handlerFeeds(s State, cmd command) error {
