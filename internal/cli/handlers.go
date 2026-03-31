@@ -54,6 +54,7 @@ func handlerAgg(s State, cmd command) error {
 		if err := scrapeFeeds(s); err != nil {
 			fmt.Println(err)
 		}
+		fmt.Println("==========")
 	}
 }
 

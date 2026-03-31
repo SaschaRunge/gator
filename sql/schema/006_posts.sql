@@ -8,7 +8,7 @@ CREATE TABLE posts (
     description TEXT,
     published_at TIMESTAMP,
     feed_id UUID NOT NULL,
-    CONSTRAINT fk_feed_id FOREIGN KEY (feed_id) REFERENCES feeds(id) ON DELETE CASCADE
+    CONSTRAINT fk_feed_id FOREIGN KEY (feed_id) REFERENCES feeds(id) ON DELETE CASCADE -- //TODO feeds currently get deleted when the user that makes them is deleted, currently not an issue as users cant be deleted
 );
 -- +goose Down
 DROP TABLE posts;
